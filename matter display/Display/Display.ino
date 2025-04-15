@@ -5,7 +5,7 @@
 Screen_EPD_EXT4_Fast myScreen(eScreen_EPD_290_KS_0F, boardArduinoNanoMatter);
 
 const uint16_t iconSize = 12;
-const uint16_t warningIconOffsetY = 2;  // Visual centering adjustment
+const uint16_t iconYOffset = 2;  // Visual centering adjustment
 
 void drawHeatIcon(uint16_t x, uint16_t y, uint16_t size) {
     myScreen.dLine(x, y, size, 0, myColours.black);
@@ -13,7 +13,7 @@ void drawHeatIcon(uint16_t x, uint16_t y, uint16_t size) {
     myScreen.dLine(x + 4, y + 8, size, 0, myColours.black);
 }
 
-void drawHeatWaveIcon(uint16_t x, uint16_t y, uint16_t size)
+void drawHeatWarningIcon(uint16_t x, uint16_t y, uint16_t size)
 {
     myScreen.setPenSolid(true);
     for (int i = 0; i < 3; i++) {
@@ -41,6 +41,15 @@ void drawSensorBar(uint16_t x, uint16_t y, uint16_t width, uint16_t height, int 
     myScreen.dRectangle(x, y, width, height, myColours.black);
 }
 
+void drawWarningLine(const char* message, void (*iconFunc)(uint16_t, uint16_t, uint16_t),
+                     uint16_t& y, uint16_t dx, uint16_t dy, uint16_t iconX)
+{
+    myScreen.gText(dx, y, message);
+    iconFunc(iconX, y + iconYOffset, iconSize);
+    y += dy;
+}
+
+
 void displayMockSensorData(int temp, int humidity, int aqi) {
     myScreen.setOrientation(3);
     myScreen.clear();
@@ -62,41 +71,33 @@ void displayMockSensorData(int temp, int humidity, int aqi) {
 
     // Sensor Readings
     myScreen.gText(x, y, formatString("Temp: %d F", temp));
-    drawSensorBar(x + 7 * dx, y, 10 * dx, dy - 2, temp, 120);
+    drawSensorBar(x + 7 * dx, y, 10 * dx, dy - 4, temp, 120);
     y += dy;
 
     myScreen.gText(x, y, formatString("Humidity: %d%%", humidity));
-    drawSensorBar(x + 7 * dx, y, 10 * dx, dy - 2, humidity, 100);
+    drawSensorBar(x + 7 * dx, y, 10 * dx, dy - 4, humidity, 100);
     y += dy;
 
     myScreen.gText(x, y, formatString("AQI: %d", aqi));
-    drawSensorBar(x + 7 * dx, y, 10 * dx, dy - 2, aqi, 200);
+    drawSensorBar(x + 7 * dx, y, 10 * dx, dy - 4, aqi, 200);
     y += dy;
     y += dy/2;
 
     // Warning section setup
     uint16_t warningStartY = y;
     int warningCount = 0;
-    uint16_t iconSize = 12;
     uint16_t iconX = x + 12 * dx;
-    uint16_t iconYOffset = 2;
 
     if (temp > 85) {
-        myScreen.gText(x, y, "Warning: High Temp!");
-        drawHeatWaveIcon(iconX, y + iconYOffset, iconSize);
-        y += dy;
+        drawWarningLine("Warning: High Temp!", drawHeatWarningIcon, y, x, dy, iconX);
         warningCount++;
     }
     if (humidity > 70) {
-        myScreen.gText(x, y, "Warning: High Humidity!");
-        drawHumidityIcon(iconX, y + iconYOffset, iconSize);
-        y += dy;
+        drawWarningLine("Warning: High Humidity!", drawHumidityIcon, y, x, dy, iconX);
         warningCount++;
     }
     if (aqi > 100) {
-        myScreen.gText(x, y, "Warning: Poor AQI!");
-        drawAQIIcon(iconX, y + iconYOffset, iconSize);
-        y += dy;
+         drawWarningLine("Warning: Poor AQI!", drawAQIIcon, y, x, dy, iconX);
         warningCount++;
     }
 
@@ -104,8 +105,8 @@ void displayMockSensorData(int temp, int humidity, int aqi) {
     if (warningCount > 0) {
         uint16_t boxX = x - 4;
         uint16_t boxY = warningStartY - 2;
-        uint16_t boxWidth = xMax - 2 * dx;
-        uint16_t boxHeight = warningCount * dy + 4;
+        uint16_t boxWidth = 17.3 * dx;
+        uint16_t boxHeight = warningCount * dy + 6;
 
         myScreen.setPenSolid(false);
         myScreen.dRectangle(boxX, boxY, boxWidth, boxHeight, myColours.black);
