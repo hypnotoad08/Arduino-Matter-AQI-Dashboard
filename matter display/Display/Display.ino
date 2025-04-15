@@ -10,6 +10,63 @@ void drawWarningTriangleWithDot(uint16_t x, uint16_t y, uint16_t size) {
      myScreen.setPenSolid(true); // Set to draw a filled circl
     myScreen.circle(midX, y + size * 2 / 3, size / 10, myColours.black);  // Little dot as alert
 }
+
+void drawDropletIcon(uint16_t x, uint16_t y, uint16_t size) {
+    uint16_t centerX = x + size / 2;
+    uint16_t topY = y;
+    uint16_t bottomY = y + size;
+
+    myScreen.setPenSolid(false);
+
+    // Pointed top (triangle part of the droplet)
+    myScreen.triangle(
+        centerX, topY,                 // top point
+        x, bottomY - size / 3,        // bottom left
+        x + size, bottomY - size / 3, // bottom right
+        myColours.black
+    );
+
+    // Rounded bottom (circle part of the droplet)
+    myScreen.circle(centerX, bottomY - size / 4, size / 4, myColours.black);
+}
+
+void drawHeatIcon(uint16_t x, uint16_t y, uint16_t width) {
+    myScreen.dLine(x, y, width / 2, 0, myColours.black);
+    myScreen.dLine(x, y + 3, width, 0, myColours.black);
+    myScreen.dLine(x, y + 6, width / 2, 0, myColours.black);
+}
+
+void drawHumidityIcon(uint16_t x, uint16_t y, uint16_t size) {
+    // Drop tip (triangle)
+    myScreen.triangle(
+        x + size / 2, y,
+        x, y + size,
+        x + size, y + size,
+        myColours.black
+    );
+    // Drop bottom (circle overlap)
+    myScreen.circle(x + size / 2, y + size, size / 4, myColours.black);
+}
+
+
+void drawThermometerIcon(uint16_t x, uint16_t y, uint16_t height) {
+    uint16_t bulbRadius = height / 5;
+    uint16_t stemHeight = height - bulbRadius * 2;
+    uint16_t stemWidth = 2;
+
+    uint16_t centerX = x + bulbRadius;
+    uint16_t topY = y;
+    uint16_t bulbY = y + stemHeight;
+
+    myScreen.setPenSolid(true);
+
+    // Draw stem as a vertical thin rectangle
+    myScreen.dRectangle(centerX - stemWidth / 2, topY, stemWidth, stemHeight, myColours.black);
+
+    // Draw bulb as a circle
+    myScreen.circle(centerX, bulbY + bulbRadius, bulbRadius, myColours.black);
+}
+
 void drawSensorBar(uint16_t x, uint16_t y, uint16_t width, uint16_t height, int value, int maxValue) {
     value = constrain(value, 0, maxValue); // Ensure value is within range
     uint16_t barWidth = map(value, 0, maxValue, 0, width);
@@ -60,10 +117,12 @@ void displayMockSensorData(int temp, int humidity, int aqi) {
     y += dy / 2;
     if (temp > 85) {
         myScreen.gText(x, y, "Warning: High Temp!");
+        drawHeatIcon(x + 13 * dx, y + 2, 10);
         y += dy;
     }
     if (humidity > 70) {
         myScreen.gText(x, y, "Warning: High Humidity!");
+        drawHumidityIcon(x + 13 * dx, y, warningIconSize);
         y += dy;
     }
     if (aqi > 100) {
