@@ -15,20 +15,17 @@ void drawHeatIcon(uint16_t x, uint16_t y, uint16_t size) {
 
 void drawHeatWaveIcon(uint16_t x, uint16_t y, uint16_t size)
 {
-    y += 2;  // Adjust icon Y slightly downward for visual center
     myScreen.setPenSolid(true);
     for (int i = 0; i < 3; i++) {
         myScreen.dLine(x, y + i * 4, size, 0, myColours.black);
     }
 }
 void drawHumidityIcon(uint16_t x, uint16_t y, uint16_t size) {
-    y += 2;  // Adjust icon Y slightly downward for visual center
     myScreen.circle(x + size / 2, y + size / 2, size / 4, myColours.black);
     myScreen.point(x + size / 2, y + size / 2 + 2, myColours.black);
 }
 
 void drawAQIIcon(uint16_t x, uint16_t y, uint16_t size) {
-    y += 2;  // Adjust icon Y slightly downward for visual center
     uint16_t midX = x + size / 2;
     myScreen.triangle(midX, y, x, y + size, x + size, y + size, myColours.black);
     myScreen.setPenSolid(false);
@@ -48,19 +45,22 @@ void displayMockSensorData(int temp, int humidity, int aqi) {
     myScreen.setOrientation(3);
     myScreen.clear();
 
-    uint16_t xMax = myScreen.screenSizeX();
-    uint16_t yMax = myScreen.screenSizeY();
+    // Grid system
+    static uint16_t xMax = myScreen.screenSizeX();
+    static uint16_t yMax = myScreen.screenSizeY();
     uint16_t dx = xMax / 20;
     uint16_t dy = yMax / 12;
     uint16_t x = dx;
     uint16_t y = dy;
 
+    // Fonts
     myScreen.selectFont(Font_Terminal12x16);
     myScreen.gText(x, y, "Air Sensor Readings");
     y += 2 * dy;
 
     myScreen.selectFont(Font_Terminal8x12);
 
+    // Sensor Readings
     myScreen.gText(x, y, formatString("Temp: %d F", temp));
     drawSensorBar(x + 7 * dx, y, 10 * dx, dy - 2, temp, 120);
     y += dy;
@@ -71,43 +71,49 @@ void displayMockSensorData(int temp, int humidity, int aqi) {
 
     myScreen.gText(x, y, formatString("AQI: %d", aqi));
     drawSensorBar(x + 7 * dx, y, 10 * dx, dy - 2, aqi, 200);
-// After AQI rendering
-y += dy / 2;
-
-uint16_t warningStartY = y;
-int warningCount = 0;
-
-myScreen.setPenSolid(true);
-
-if (temp > 85) {
-    myScreen.gText(x, y, "Warning: High Temp!");
-    drawHeatWaveIcon(iconX, y + iconYOffset, iconSize);
     y += dy;
-    warningCount++;
-}
-if (humidity > 70) {
-    myScreen.gText(x, y, "Warning: High Humidity!");
-    drawHumidityIcon(iconX, y + iconYOffset, iconSize);
-    y += dy;
-    warningCount++;
-}
-if (aqi > 100) {
-    myScreen.gText(x, y, "Warning: Poor AQI!");
-    drawAQIIcon(iconX, y + iconYOffset, iconSize);
-    y += dy;
-    warningCount++;
-}
+    y += dy/2;
 
-// Draw dynamic bounding box if there were any warnings
-if (warningCount > 0) {
-    myScreen.setPenSolid(false);
-    uint16_t boxHeight = warningCount * dy;
-    myScreen.dRectangle(x - 4, warningStartY - 2, xMax - 2 * dx, boxHeight + 4, myColours.black);
-}
+    // Warning section setup
+    uint16_t warningStartY = y;
+    int warningCount = 0;
+    uint16_t iconSize = 12;
+    uint16_t iconX = x + 12 * dx;
+    uint16_t iconYOffset = 2;
 
+    if (temp > 85) {
+        myScreen.gText(x, y, "Warning: High Temp!");
+        drawHeatWaveIcon(iconX, y + iconYOffset, iconSize);
+        y += dy;
+        warningCount++;
+    }
+    if (humidity > 70) {
+        myScreen.gText(x, y, "Warning: High Humidity!");
+        drawHumidityIcon(iconX, y + iconYOffset, iconSize);
+        y += dy;
+        warningCount++;
+    }
+    if (aqi > 100) {
+        myScreen.gText(x, y, "Warning: Poor AQI!");
+        drawAQIIcon(iconX, y + iconYOffset, iconSize);
+        y += dy;
+        warningCount++;
+    }
+
+    // Draw dynamic box around warnings
+    if (warningCount > 0) {
+        uint16_t boxX = x - 4;
+        uint16_t boxY = warningStartY - 2;
+        uint16_t boxWidth = xMax - 2 * dx;
+        uint16_t boxHeight = warningCount * dy + 4;
+
+        myScreen.setPenSolid(false);
+        myScreen.dRectangle(boxX, boxY, boxWidth, boxHeight, myColours.black);
+    }
 
     myScreen.flush();
 }
+
 
 void setup() {
     mySerial.begin(115200);
