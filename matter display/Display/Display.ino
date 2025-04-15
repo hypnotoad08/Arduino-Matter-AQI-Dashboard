@@ -4,11 +4,6 @@
 
 Screen_EPD_EXT4_Fast myScreen(eScreen_EPD_290_KS_0F, boardArduinoNanoMatter);
 
-const uint16_t iconSize = 12;
-const uint16_t iconYOffset = 2; 
-const uint16_t gridCols = 20;
-const uint16_t gridRows = 12;
-
 struct SensorReadings {
     int temperatureF;
     int humidityPercent;
@@ -19,6 +14,18 @@ struct SensorReadings {
     int pm25;
     int pm10;
 };
+
+const uint16_t iconSize = 12;
+const uint16_t iconYOffset = 2; 
+const uint16_t gridCols = 20;
+const uint16_t gridRows = 12;
+
+const unsigned long pageDuration = 8000; // 8 seconds per page
+unsigned long lastPageSwitch = 0;
+int currentPage = 0;
+const int totalPages = 3;
+SensorReadings currentReadings;
+
 
 struct SensorField {
     const char* label;
@@ -160,6 +167,58 @@ void displaySensorData(const SensorReadings& readings) {
     myScreen.flush();
 }
 
+void displaySensorPage(const SensorReadings& readings, uint8_t page) {
+    myScreen.setOrientation(3);
+    myScreen.clear();
+
+    uint16_t xMax = myScreen.screenSizeX();
+    uint16_t yMax = myScreen.screenSizeY();
+    const uint16_t dx = xMax / gridCols;
+    const uint16_t dy = yMax / gridRows;
+    uint16_t x = dx;
+    uint16_t y = dy;
+    uint16_t sensorBarX = x + 7 * dx;
+
+    myScreen.selectFont(Font_Terminal12x16);
+    myScreen.gText(x, y, "Air Sensor Readings");
+    myScreen.selectFont(Font_Terminal8x12);
+    y += 2 * dy;
+
+    const char* pageTitles[] = {
+        "Env Conditions", "Particulates", "Gas & VOCs"
+    };
+    myScreen.gText(x, y, pageTitles[page]);
+    y += dy;
+
+    auto drawSensorWithBar = [&](const char* label, int value, int max) {
+        myScreen.gText(x, y, formatString("%s: %d", label, value));
+        drawSensorBar(sensorBarX, y, 10 * dx, dy - 4, value, max);
+        y += dy;
+    };
+
+    switch (page) {
+        case 0:
+            drawSensorWithBar("Temp (F)", readings.temperatureF, 120);
+            drawSensorWithBar("Humidity (%)", readings.humidityPercent, 100);
+            drawSensorWithBar("AQI", readings.aqi, 200);
+            break;
+        case 1:
+            drawSensorWithBar("PM1", readings.pm1, 100);
+            drawSensorWithBar("PM2.5", readings.pm25, 100);
+            drawSensorWithBar("PM10", readings.pm10, 100);
+            break;
+        case 2:
+            drawSensorWithBar("CO2 (ppm)", readings.co2ppm, 2000);
+            drawSensorWithBar("VOC Index", readings.vocIndex, 500);
+            break;
+    }
+
+    // Page indicator at bottom right
+    myScreen.gText(xMax - 6 * dx, yMax - dy, formatString("Page %d/%d", page + 1, totalPages));
+    myScreen.flush();
+}
+
+
 void setup() {
     mySerial.begin(115200);
     delay(500);
@@ -169,8 +228,17 @@ void setup() {
 }
 
 void loop() {
-    SensorReadings mock = generateMockSensorData();
-    displaySensorData(mock);
-    //displayMockSensorData(temp, humidity, aqi);
-    delay(10000);
+    unsigned long now = millis();
+
+    if (now - lastPageSwitch >= pageDuration) {
+        lastPageSwitch = now;
+
+        // Refresh data only once per full cycle
+        if (currentPage == 0)
+            currentReadings = generateMockSensorData();
+
+        displaySensorPage(currentReadings, currentPage);
+        currentPage = (currentPage + 1) % totalPages;
+    }
 }
+
