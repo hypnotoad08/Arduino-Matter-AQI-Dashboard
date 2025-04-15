@@ -2,54 +2,47 @@
 #include "hV_HAL_Peripherals.h"
 
 Screen_EPD_EXT4_Fast myScreen(eScreen_EPD_290_KS_0F, boardArduinoNanoMatter);
+
 const uint16_t warningIconSize = 12;
 
-void drawFramedBar(uint16_t x, uint16_t y, uint16_t width, uint16_t height, int value, int maxValue)
-{
-    value = constrain(value, 0, maxValue);
-    uint16_t barWidth = map(value, 0, maxValue, 0, width);
-
-    // Frame outline
+void drawWarningTriangleWithDot(uint16_t x, uint16_t y, uint16_t size) {
+    uint16_t midX = x + size / 2;
     myScreen.setPenSolid(false);
-    myScreen.dRectangle(x, y, width, height, myColours.black);
-
-    // Filled bar
-    myScreen.setPenSolid(true);
-    myScreen.dRectangle(x, y, barWidth, height, myColours.black);
+    myScreen.triangle(midX, y, x, y + size, x + size, y + size, myColours.black);
+    myScreen.point(midX, y + size * 2 / 3, myColours.black);
 }
 
-void drawWarningTriangle(uint16_t x, uint16_t y, uint16_t size)
-{
-    myScreen.setPenSolid(false);
-    myScreen.triangle(
-        x + size / 2, y,
-        x, y + size,
-        x + size, y + size,
-        myColours.black);
-}
-
-void drawHeatWaveIcon(uint16_t x, uint16_t y)
-{
+void drawWarningWaveIcon(uint16_t x, uint16_t y, uint16_t width) {
     myScreen.setPenSolid(true);
-    for (int i = 0; i < 3; i++) {
-        myScreen.dLine(x, y + i * 4, 6, 0, myColours.black);
+    uint16_t waveHeight = 2;
+    for (uint16_t i = 0; i < 3; ++i) {
+        myScreen.dLine(x, y + i * 4, width, waveHeight, myColours.black);
     }
 }
 
-void drawHumidityDroplet(uint16_t x, uint16_t y)
-{
-    myScreen.setPenSolid(false);
-    myScreen.circle(x + 6, y + 6, 6, myColours.black);
-    myScreen.dLine(x + 6, y, 0, 6, myColours.black);
+void drawWarningArrowIcon(uint16_t x, uint16_t y, uint16_t size) {
+    uint16_t cx = x + size / 2;
+    myScreen.dLine(cx, y, 0, size, myColours.black);
+    myScreen.line(cx, y + size, x, y + size - 4, myColours.black);
+    myScreen.line(cx, y + size, x + size, y + size - 4, myColours.black);
 }
 
-void displayMockSensorData(int temp, int humidity, int aqi)
-{
+void drawSensorBar(uint16_t x, uint16_t y, uint16_t width, uint16_t height, int value, int maxValue) {
+    value = constrain(value, 0, maxValue);
+    uint16_t barWidth = map(value, 0, maxValue, 0, width);
+
+    myScreen.setPenSolid(true);
+    myScreen.dRectangle(x, y, barWidth, height, myColours.black); // fill
+    myScreen.setPenSolid(false);
+    myScreen.rectangle(x, y, x + width, y + height, myColours.black); // frame
+}
+
+void displayMockSensorData(int temp, int humidity, int aqi) {
     myScreen.setOrientation(3);
     myScreen.clear();
 
-    uint16_t xMax = myScreen.screenSizeX();
-    uint16_t yMax = myScreen.screenSizeY();
+    static uint16_t xMax = myScreen.screenSizeX();
+    static uint16_t yMax = myScreen.screenSizeY();
     uint16_t dx = xMax / 20;
     uint16_t dy = yMax / 12;
     uint16_t x = dx;
@@ -60,53 +53,46 @@ void displayMockSensorData(int temp, int humidity, int aqi)
     y += 2 * dy;
 
     myScreen.selectFont(Font_Terminal8x12);
-    uint16_t barX = x + 7 * dx;
-    uint16_t barW = 10 * dx;
-    uint16_t barH = dy - 2;
 
-    // Temp
+    // Sensor text + bar layout
+    uint16_t barX = x + 9 * dx;
+    uint16_t barWidth = 9 * dx;
+    uint16_t barHeight = dy - 2;
+
     myScreen.gText(x, y, formatString("Temp: %d F", temp));
-    drawFramedBar(barX, y, barW, barH, temp, 120);
+    drawSensorBar(barX, y, barWidth, barHeight, temp, 120);
     y += dy;
 
-    // Humidity
     myScreen.gText(x, y, formatString("Humidity: %d%%", humidity));
-    drawFramedBar(barX, y, barW, barH, humidity, 100);
+    drawSensorBar(barX, y, barWidth, barHeight, humidity, 100);
     y += dy;
 
-    // AQI
     myScreen.gText(x, y, formatString("AQI: %d", aqi));
-    drawFramedBar(barX, y, barW, barH, aqi, 200);
+    drawSensorBar(barX, y, barWidth, barHeight, aqi, 200);
     y += dy;
 
     // Warnings
     y += dy / 2;
-    uint16_t iconX = xMax - (warningIconSize + dx);
-    uint16_t iconY = y;
-
     if (temp > 85) {
-        myScreen.gText(x, iconY, "Warning: High Temp!");
-        drawHeatWaveIcon(iconX, iconY);
-        iconY += dy;
+        myScreen.gText(x, y, "Warning: High Temp!");
+        drawWarningArrowIcon(barX + barWidth + 2, y, 7);
+        y += dy;
     }
-
     if (humidity > 70) {
-        myScreen.gText(x, iconY, "Warning: High Humidity!");
-        drawHumidityDroplet(iconX, iconY);
-        iconY += dy;
+        myScreen.gText(x, y, "Warning: High Humidity!");
+        drawWarningWaveIcon(barX + barWidth + 2, y + 3, 8);
+        y += dy;
     }
-
     if (aqi > 100) {
-        myScreen.gText(x, iconY, "Warning: Poor AQI!");
-        drawWarningTriangle(iconX, iconY, warningIconSize);
-        iconY += dy;
+        myScreen.gText(x, y, "Warning: Poor AQI!");
+        drawWarningTriangleWithDot(barX + barWidth + 2, y, warningIconSize);
+        y += dy;
     }
 
     myScreen.flush();
 }
 
-void setup()
-{
+void setup() {
     mySerial.begin(115200);
     delay(500);
     myScreen.begin();
@@ -114,8 +100,7 @@ void setup()
     randomSeed(analogRead(A0));
 }
 
-void loop()
-{
+void loop() {
     int temp = random(65, 95);
     int humidity = random(40, 90);
     int aqi = random(20, 160);
