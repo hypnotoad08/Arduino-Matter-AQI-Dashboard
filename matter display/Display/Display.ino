@@ -3,23 +3,32 @@
 
 Screen_EPD_EXT4_Fast myScreen(eScreen_EPD_290_KS_0F, boardArduinoNanoMatter);
 
+void drawWarningTriangleWithDot(uint16_t x, uint16_t y, uint16_t size) {
+    myScreen.setPenSolid(false);
+    uint16_t midX = x + size / 2; // Store the repeated calculation in a local variable
+    myScreen.triangle(midX, y, x, y + size, x + size, y + size, myColours.black);
+    myScreen.circle(x + size / 2, y + size * 2 / 3, size / 10, myColours.black);  // Little dot as alert
+    myScreen.circle(x + size / 2, y + size * 2 / 3, 1, myColours.black);  // Little dot as alert
+}
 void drawSensorBar(uint16_t x, uint16_t y, uint16_t width, uint16_t height, int value, int maxValue) {
+    value = constrain(value, 0, maxValue); // Ensure value is within range
     uint16_t barWidth = map(value, 0, maxValue, 0, width);
 
-    // Optional: draw outer outline
     myScreen.setPenSolid(true);
     myScreen.dRectangle(x, y, barWidth, height, myColours.black);
 }
 
 
 
+const uint16_t warningIconSize = 12; // Define a descriptive constant for the warning icon size
+
 void displayMockSensorData(int temp, int humidity, int aqi) {
     myScreen.setOrientation(3);
     myScreen.clear();
 
     // Grid dimensions
-    uint16_t xMax = myScreen.screenSizeX();
-    uint16_t yMax = myScreen.screenSizeY();
+    static uint16_t xMax = myScreen.screenSizeX();
+    static uint16_t yMax = myScreen.screenSizeY();
     uint16_t dx = xMax / 20; // horizontal unit
     uint16_t dy = yMax / 12; // vertical unit
     uint16_t x = dx;
@@ -58,6 +67,7 @@ void displayMockSensorData(int temp, int humidity, int aqi) {
         y += dy;
     }
     if (aqi > 100) {
+        drawWarningTriangleWithDot(x + 12 * dx, y, warningIconSize);
         myScreen.gText(x, y, "Warning: Poor AQI!");
         y += dy;
     }
@@ -66,10 +76,15 @@ void displayMockSensorData(int temp, int humidity, int aqi) {
 }
 
 void setup() {
+
     mySerial.begin(115200);
-    delay(500);
+    delay(500); // Allow time for the serial connection to stabilize
+
+    // Initialize the screen and prepare it for use
     myScreen.begin();
-    myScreen.regenerate();
+    myScreen.regenerate(); // Refresh the screen to ensure a clean state
+
+    // Seed the random number generator using an analog pin
     randomSeed(analogRead(A0));
 }
 
