@@ -7,8 +7,8 @@ void drawWarningTriangleWithDot(uint16_t x, uint16_t y, uint16_t size) {
     myScreen.setPenSolid(false);
     uint16_t midX = x + size / 2; // Store the repeated calculation in a local variable
     myScreen.triangle(midX, y, x, y + size, x + size, y + size, myColours.black);
-    myScreen.circle(x + size / 2, y + size * 2 / 3, size / 10, myColours.black);  // Little dot as alert
-    myScreen.circle(x + size / 2, y + size * 2 / 3, 1, myColours.black);  // Little dot as alert
+     myScreen.setPenSolid(true); // Set to draw a filled circl
+    myScreen.circle(midX, y + size * 2 / 3, size / 10, myColours.black);  // Little dot as alert
 }
 void drawSensorBar(uint16_t x, uint16_t y, uint16_t width, uint16_t height, int value, int maxValue) {
     value = constrain(value, 0, maxValue); // Ensure value is within range
