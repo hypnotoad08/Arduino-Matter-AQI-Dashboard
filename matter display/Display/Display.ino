@@ -6,6 +6,7 @@
 #include "PageRenderer.h"
 #include "PageTypes.h"
 #include "DisplayManager.h"
+#include "Ext4SensorReader.h"
 
 
 Screen_EPD_EXT4_Fast myScreen(eScreen_EPD_290_KS_0F, boardArduinoNanoMatter);
@@ -27,7 +28,7 @@ void setup() {
     myScreen.setOrientation(3);
     DisplayManager::reset();
     randomSeed(analogRead(A0) + millis());
-    myScreen.
+    initExt4Sensor();
 }
 
 void loop() {
@@ -39,6 +40,9 @@ void loop() {
         // If we’re back to the first page, update readings
         if (currentPage == 0) {
             currentReadings = generateMockSensorData();
+            Ext4SensorData screenData = readExt4SensorData();
+            currentReadings.screenTemperatureF = round(screenData.temperatureF);
+            currentReadings.screenHumidityPercent = round(screenData.humidityPercent);
             currentTimestamp = generateMockTimestamp();
         }
 
