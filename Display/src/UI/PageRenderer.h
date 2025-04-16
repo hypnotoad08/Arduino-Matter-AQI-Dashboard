@@ -1,8 +1,8 @@
 #pragma once
-#include "SensorReadings.h"
+#include "../Core/SensorReadings.h"
 #include "DrawingHelpers.h"
 #include "WarningHelpers.h"
-#include "PageTypes.h"
+#include "../Core/PageTypes.h"
 #include "DisplayManager.h"
 
 extern Screen_EPD_EXT4_Fast myScreen;

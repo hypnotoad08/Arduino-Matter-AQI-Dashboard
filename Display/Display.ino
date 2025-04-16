@@ -1,12 +1,18 @@
+// --- EXT4 and Hardware Libraries ---
 #include "PDLS_EXT4_Basic_Matter.h"
 #include "hV_HAL_Peripherals.h"
-#include "SensorReadings.h"
-#include "DrawingHelpers.h"
-#include "WarningHelpers.h"
-#include "PageRenderer.h"
-#include "PageTypes.h"
-#include "DisplayManager.h"
-#include "Ext4SensorReader.h"
+
+// --- Core Logic ---
+#include "src/Core/SensorReadings.h"
+#include "src/Core/Ext4SensorReader.h"
+#include "src/Core/PageTypes.h"
+
+// --- UI Rendering ---
+#include "src/UI/DrawingHelpers.h"
+#include "src/UI/WarningHelpers.h"
+#include "src/UI/PageRenderer.h"
+#include "src/UI/DisplayManager.h"
+
 
 
 Screen_EPD_EXT4_Fast myScreen(eScreen_EPD_290_KS_0F, boardArduinoNanoMatter);

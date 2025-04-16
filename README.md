@@ -17,20 +17,26 @@ An Arduino Nano Matter-powered e-paper display that shows air quality and enviro
 - **Arduino Nano Matter**
 - **EPDK-Matter EXT4 e-paper board** (2.9" E Ink)
 - **SEN66 air quality sensor** (planned)
-- **Thread (Matter over Thread) + UART configuration**
+- **Thread (Matter over Thread) + UART configuration** (planned)
 
 ## Code Structure
 
-| File | Purpose |
-|------|---------|
-| `Display.ino` | Main sketch, handles boot/setup and page cycling |
-| `SensorReadings.h` | Struct holding all air quality values |
-| `DrawingHelpers.h` | Renders sensor bars, text, and layout |
-| `WarningHelpers.h` | Renders warning messages and icons |
-| `PageRenderer.h` | Handles page-specific display logic |
-| `PageTypes.h` | Enum values for each screen page |
-| `DisplayManager.h` | E-paper flush/regenerate logic |
-| `Ext4SensorReader.h` | Handles EXT4 HDC2080 sensor reads |
+The code is modularized and organized under `src/` into logical subfolders.
+
+```
+Display/
+├── Display.ino                  # Main sketch, handles boot/setup and page cycling
+└── src/
+    ├── Core/
+    │   ├── SensorReadings.h     # Struct holding all air quality values
+    │   ├── PageTypes.h          # Enum values for each screen page
+    │   └── Ext4SensorReader.h   # Reads EXT4 HDC2080 sensor data via I2C
+    └── UI/
+        ├── DrawingHelpers.h     # Renders sensor bars, text, and layout
+        ├── WarningHelpers.h     # Renders warning messages and icons
+        ├── PageRenderer.h       # Handles page-specific display logic
+        └── DisplayManager.h     # E-paper flush and refresh logic
+```
 
 ## License
 

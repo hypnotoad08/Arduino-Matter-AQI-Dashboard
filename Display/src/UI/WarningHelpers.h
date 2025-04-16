@@ -1,6 +1,6 @@
 #pragma once
 #include "PDLS_EXT4_Basic_Matter.h"
-#include "SensorReadings.h"
+#include "../Core/SensorReadings.h"
 
 extern Screen_EPD_EXT4_Fast myScreen;
 
