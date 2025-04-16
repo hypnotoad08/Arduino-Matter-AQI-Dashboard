@@ -1,6 +1,7 @@
 
 #include "PDLS_EXT4_Basic_Matter.h"
 #include "hV_HAL_Peripherals.h"
+#include <time.h>
 
 Screen_EPD_EXT4_Fast myScreen(eScreen_EPD_290_KS_0F, boardArduinoNanoMatter);
 
@@ -15,16 +16,24 @@ struct SensorReadings {
     int pm10;
 };
 
-const uint16_t iconSize = 12;
+enum PageType {
+    ENV_CONDITIONS = 0,
+    PARTICULATES,
+    GAS_AND_VOCS,
+    WARNINGS
+};
+
+const uint16_t defaultIconSize = 12;
 const uint16_t iconYOffset = 2; 
 const uint16_t gridCols = 20;
 const uint16_t gridRows = 12;
 
-const unsigned long pageDuration = 8000; // 8 seconds per page
+const unsigned long pageSwitchDurationMs = 8000; // 8 seconds per page
 unsigned long lastPageSwitch = 0;
 int currentPage = 0;
 const int totalPages = 3;
 SensorReadings currentReadings;
+String currentTimestamp;
 
 
 struct SensorField {
@@ -45,6 +54,29 @@ SensorReadings generateMockSensorData() {
         .pm25 = random(0, 100),
         .pm10 = random(0, 100),
     };
+}
+
+String generateMockTimestamp() {
+    int mockHour = random(0, 24);
+    int mockMinute = random(0, 60);
+    int mockSecond = random(0, 60);
+    int mockMonth = 4;
+    int mockDay = 15;
+    int mockYear = 2025;
+
+    char buffer[22];
+    snprintf(buffer, sizeof(buffer), "%02d/%02d %02d:%02d:%02d",
+             mockMonth, mockDay, mockHour, mockMinute, mockSecond);
+    return String(buffer);
+}
+
+const char* formatTimestamp(time_t t) {
+    static char buf[20];
+    struct tm* tm_info = localtime(&t);
+    snprintf(buf, sizeof(buf), "%02d/%02d %02d:%02d:%02d",
+             tm_info->tm_mon + 1, tm_info->tm_mday,
+             tm_info->tm_hour, tm_info->tm_min, tm_info->tm_sec);
+    return buf;
 }
 
 
@@ -83,13 +115,35 @@ void drawSensorBar(uint16_t x, uint16_t y, uint16_t width, uint16_t height, int 
 }
 
 void drawSensorWithBar(const char* label, int value, int maxValue, uint16_t& y,
-                       uint16_t x, uint16_t barX, uint16_t dx, uint16_t dy)
+                       uint16_t x, uint16_t dx, uint16_t dy, uint16_t xMax)
 {
-    myScreen.gText(x, y, formatString("%s: %d%s", label, value, 
-        strcmp(label, "Humidity") == 0 ? "%" : strcmp(label, "Temp") == 0 ? " F" : ""));
-    drawSensorBar(barX, y, 10 * dx, dy - 4, value, maxValue);
+    const uint16_t labelX = x;
+    const uint16_t valueX = x + 6 * dx;
+    const uint16_t barX = x + 12 * dx;
+    const uint16_t barWidth = xMax - barX - dx;
+
+    const char* unit = getUnitForLabel(label);
+    myScreen.gText(labelX, y, label);
+    myScreen.gText(valueX, y, formatString("%d%s", value, unit));
+    drawSensorBar(barX, y, barWidth, dy - 4, value, maxValue);
+
     y += dy;
 }
+
+const char* getUnitForLabel(const char* label) {
+    if (strcmp(label, "Temp") == 0) {
+        return " F";
+    } else if (strcmp(label, "Humidity") == 0) {
+        return " %";
+    } else if (strcmp(label, "CO2") == 0) {
+        return " ppm";
+    } else if (strcmp(label, "PM1") == 0 || strcmp(label, "PM2.5") == 0 || strcmp(label, "PM10") == 0) {
+        return " ug/m3";
+    } else {
+        return "";
+    }
+}
+
 
 bool hasHighTemp(const SensorReadings& r)     { return r.temperatureF > 85; }
 bool hasHighHumidity(const SensorReadings& r) { return r.humidityPercent > 70; }
@@ -108,74 +162,10 @@ void drawWarningLine(const char* const message, void (*iconFunc)(uint16_t, uint1
 
 {
     myScreen.gText(dx, y, message);
-    iconFunc(iconX, y + iconYOffset, iconSize);
+    iconFunc(iconX, y + iconYOffset, defaultIconSize);
     y += dy;
 }
 
-void displaySensorData(const SensorReadings& readings) {
-    myScreen.setOrientation(3);
-    myScreen.clear();
-
-    uint16_t xMax = myScreen.screenSizeX();
-    uint16_t yMax = myScreen.screenSizeY();
-    const uint16_t dx = xMax / gridCols;
-    const uint16_t dy = yMax / gridRows;
-    uint16_t x = dx;
-    uint16_t y = dy;
-    uint16_t sensorBarX = x + 7 * dx;
-
-    myScreen.selectFont(Font_Terminal12x16);
-    myScreen.gText(x, y, "Air Sensor Readings");
-    y += 2 * dy;
-    myScreen.selectFont(Font_Terminal8x12);
-
-    // Display sensor values
-    auto drawSensorWithBar = [&](const char* label, int value, int max) {
-        myScreen.gText(x, y, formatString("%s: %d", label, value));
-        drawSensorBar(sensorBarX, y, 10 * dx, dy - 4, value, max);
-        y += dy;
-    };
-
-    drawSensorWithBar("Temp (F)", readings.temperatureF, 120);
-    drawSensorWithBar("Humidity (%)", readings.humidityPercent, 100);
-    drawSensorWithBar("AQI", readings.aqi, 200);
-    drawSensorWithBar("PM1", readings.pm1, 200);
-    drawSensorWithBar("PM2.5", readings.pm25, 200);
-    drawSensorWithBar("PM10",readings.pm10,200);
-    drawSensorWithBar("CO2 (ppm)", readings.co2ppm, 2000);
-    drawSensorWithBar("VOC Index", readings.vocIndex, 500);
-
-    y += dy / 2;
-
-    // Warnings
-    uint16_t warningStartY = y;
-    int warningCount = 0;
-    uint16_t iconX = x + 12 * dx;
-
-    if (readings.temperatureF > 85) {
-        drawWarningLine("Warning: High Temp!", drawHeatWarningIcon, y, x, dy, iconX);
-        ++warningCount;
-    }
-    if (readings.humidityPercent > 70) {
-        drawWarningLine("Warning: High Humidity!", drawHumidityIcon, y, x, dy, iconX);
-        ++warningCount;
-    }
-    if (readings.aqi > 100) {
-        drawWarningLine("Warning: Poor AQI!", drawAQIIcon, y, x, dy, iconX);
-        ++warningCount;
-    }
-
-    if (warningCount > 0) {
-        uint16_t boxX = x - 4;
-        uint16_t boxY = warningStartY - 2;
-        uint16_t boxWidth = 17.3 * dx;
-        uint16_t boxHeight = warningCount * dy + 6;
-        myScreen.setPenSolid(false);
-        myScreen.dRectangle(boxX, boxY, boxWidth, boxHeight, myColours.black);
-    }
-
-    myScreen.flush();
-}
 
 void drawWarnings(const SensorReadings& readings, uint16_t& y, uint16_t x, uint16_t dx, uint16_t dy) {
     myScreen.selectFont(Font_Terminal8x12);
@@ -207,17 +197,16 @@ void drawWarnings(const SensorReadings& readings, uint16_t& y, uint16_t x, uint1
     }
 }
 
-void displaySensorPage(const SensorReadings& readings, int pageIndex, int totalBasePages, int totalPages) {
+void displaySensorPage(const SensorReadings& readings, PageType pageIndex, int totalBasePages, int totalPages) {
     myScreen.setOrientation(3);
     myScreen.clear();
 
-    uint16_t xMax = myScreen.screenSizeX();
-    uint16_t yMax = myScreen.screenSizeY();
+    const uint16_t xMax = myScreen.screenSizeX();
+    const uint16_t yMax = myScreen.screenSizeY();
     const uint16_t dx = xMax / gridCols;
     const uint16_t dy = yMax / gridRows;
-    uint16_t x = dx;
+    const uint16_t x = dx;
     uint16_t y = dy;
-    uint16_t barX = x + 7 * dx;
 
     myScreen.selectFont(Font_Terminal12x16);
     myScreen.gText(x, y, "Air Sensor Readings");
@@ -225,38 +214,39 @@ void displaySensorPage(const SensorReadings& readings, int pageIndex, int totalB
 
     myScreen.selectFont(Font_Terminal8x12);
 
-    // Draw based on page
-    if (pageIndex == 0) {
+    if (pageIndex == ENV_CONDITIONS) {
         myScreen.gText(x, y, "Env Conditions");
         y += 2 * dy;
-        drawSensorWithBar("Temp (F)", readings.temperatureF, 120, y, x, barX, dx, dy);
-        drawSensorWithBar("Humidity (%)", readings.humidityPercent, 100, y, x, barX, dx, dy);
-        drawSensorWithBar("AQI", readings.aqi, 200, y, x, barX, dx, dy);
+        drawSensorWithBar("Temp", readings.temperatureF, 120, y, x, dx, dy, xMax);
+        drawSensorWithBar("Humidity", readings.humidityPercent, 100, y, x, dx, dy, xMax);
+        drawSensorWithBar("AQI", readings.aqi, 200, y, x, dx, dy, xMax);
     }
-    else if (pageIndex == 1) {
+    else if (pageIndex == PARTICULATES) {
         myScreen.gText(x, y, "Particulates");
         y += 2 * dy;
-        drawSensorWithBar("PM1", readings.pm1, 200, y, x, barX, dx, dy);
-        drawSensorWithBar("PM2.5", readings.pm25, 200, y, x, barX, dx, dy);
-        drawSensorWithBar("PM10", readings.pm10, 200, y, x, barX, dx, dy);
+        drawSensorWithBar("PM1", readings.pm1, 200, y, x, dx, dy, xMax);
+        drawSensorWithBar("PM2.5", readings.pm25, 200, y, x, dx, dy, xMax);
+        drawSensorWithBar("PM10", readings.pm10, 200, y, x, dx, dy, xMax);
     }
-    else if (pageIndex == 2) {
+    else if (pageIndex == GAS_AND_VOCS) {
         myScreen.gText(x, y, "Gas & VOCs");
         y += 2 * dy;
-        drawSensorWithBar("CO2 (ppm)", readings.co2ppm, 2000, y, x, barX, dx, dy);
-        drawSensorWithBar("VOC Index", readings.vocIndex, 500, y, x, barX, dx, dy);
-
+        drawSensorWithBar("CO2", readings.co2ppm, 2000, y, x, dx, dy, xMax);
+        drawSensorWithBar("VOC Index", readings.vocIndex, 500, y, x, dx, dy, xMax);
     }
-    else if (pageIndex == 3) {
+    else if (pageIndex == WARNINGS) {
         myScreen.gText(x, y, "Warnings");
         y += dy;
         y += dy / 2;
         drawWarnings(readings, y, x, dx, dy);
     }
 
-    // Page indicator
+    myScreen.gText(x, yMax - dy, "Last update:");
+    myScreen.gText(x + 6 * dx, yMax - dy, currentTimestamp.c_str());
+
+    // Page Indicator
     char buf[20];
-    sprintf(buf, "Page %d/%d", pageIndex + 1, totalPages);
+    snprintf(buf, sizeof(buf), "Page %d/%d", pageIndex + 1, totalPages);
     myScreen.gText(xMax - 6 * dx, yMax - dy, buf);
 
     myScreen.flush();
@@ -264,37 +254,37 @@ void displaySensorPage(const SensorReadings& readings, int pageIndex, int totalB
 
 
 
+
 void setup() {
     mySerial.begin(115200);
-    delay(500);
+    delay(100); // Reduced delay to 100ms for faster initialization
     myScreen.begin();
     myScreen.regenerate();
-    randomSeed(analogRead(A0));
+    randomSeed(analogRead(A0) + millis());
 }
 
 void loop() {
-    unsigned long now = millis();
+    unsigned long currentMillis = millis(); // Store the value of millis() in a local variable
 
-    if (now - lastPageSwitch >= pageDuration) {
-        lastPageSwitch = now;
+    if (currentMillis - lastPageSwitch >= pageSwitchDurationMs) {
+        lastPageSwitch = currentMillis;
 
         // Refresh sensor values once per full cycle
         if (currentPage == 0) {
             currentReadings = generateMockSensorData();
+             currentTimestamp = generateMockTimestamp();
         }
 
         // Now that currentReadings is ready, calculate pages
         const int basePages = 3;
+        const int warningsPerPage = 3; // Define how many warnings fit on one page
         const int warningCount = getWarningCount(currentReadings);
-        const int totalPages = basePages + (warningCount > 2 ? 1 : (warningCount > 0 ? 1 : 0));
+        const int warningPages = (warningCount + warningsPerPage - 1) / warningsPerPage; // Calculate required warning pages
+        const int totalPages = basePages + warningPages;
 
-        // Display
-        displaySensorPage(currentReadings, currentPage, basePages, totalPages);
-
+        // Display the current page
+        displaySensorPage(currentReadings, static_cast<PageType>(currentPage), basePages, totalPages);
         // Move to next page
         currentPage = (currentPage + 1) % totalPages;
     }
 }
-
-
-
