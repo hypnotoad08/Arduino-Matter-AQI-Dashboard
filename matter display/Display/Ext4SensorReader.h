@@ -1,3 +1,8 @@
+// Portions of this file are adapted from PDLS_EXT4_Basic_Matter
+// https://github.com/PervasiveDisplays/PDLS_EXT4_Basic_Matter
+// Licensed under CC BY-SA 4.0: https://creativecommons.org/licenses/by-sa/4.0/
+
+
 #ifndef EXT4_SENSOR_READER_H
 #define EXT4_SENSOR_READER_H
 // PDLS
