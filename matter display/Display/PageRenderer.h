@@ -3,6 +3,7 @@
 #include "DrawingHelpers.h"
 #include "WarningHelpers.h"
 #include "PageTypes.h"
+#include "DisplayManager.h"
 
 extern Screen_EPD_EXT4_Fast myScreen;
 
@@ -23,8 +24,10 @@ void displaySensorPage(const SensorReadings& r, PageType page, const String& tim
 
     if (page == ENV_CONDITIONS) {
         myScreen.gText(x, y, "Env Conditions"); y += 2 * dy;
-        drawSensorWithBar("Temp", r.temperatureF, 120, y, x, dx, dy, xMax);
-        drawSensorWithBar("Humidity", r.humidityPercent, 100, y, x, dx, dy, xMax);
+        drawSensorWithBar("Temp (M)", r.temperatureF, 120, y, x, dx, dy, xMax);
+        drawSensorWithBar("Temp (S)", r.screenTemperatureF, 120, y, x, dx, dy, xMax);
+        drawSensorWithBar("Humidity (M)", r.humidityPercent, 100, y, x, dx, dy, xMax);
+        drawSensorWithBar("Humidity (S)", r.screenHumidityPercent, 100, y, x, dx, dy, xMax);
         drawSensorWithBar("AQI", r.aqi, 200, y, x, dx, dy, xMax);
     } else if (page == PARTICULATES) {
         myScreen.gText(x, y, "Particulates"); y += 2 * dy;
@@ -47,5 +50,5 @@ void displaySensorPage(const SensorReadings& r, PageType page, const String& tim
     snprintf(buf, sizeof(buf), "Page %d/%d", page + 1, totalPages);
     myScreen.gText(xMax - 6 * dx, yMax - dy, buf);
 
-    myScreen.flush();
+    DisplayManager::flush();
 }

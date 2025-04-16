@@ -9,8 +9,8 @@ const uint16_t gridCols = 20;
 const uint16_t gridRows = 12;
 
 const char* getUnitForLabel(const char* label) {
-    if (strcmp(label, "Temp") == 0) return " F";
-    if (strcmp(label, "Humidity") == 0) return " %";
+    if (strstr(label, "Temp")) return " F";
+    if (strstr(label, "Humidity")) return " %";
     if (strcmp(label, "CO2") == 0) return " ppm";
     if (strstr(label, "PM")) return " ug/m3";
     return "";

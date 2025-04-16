@@ -5,6 +5,8 @@
 #include "WarningHelpers.h"
 #include "PageRenderer.h"
 #include "PageTypes.h"
+#include "DisplayManager.h"
+
 
 Screen_EPD_EXT4_Fast myScreen(eScreen_EPD_290_KS_0F, boardArduinoNanoMatter);
 
@@ -14,30 +16,54 @@ int currentPage = 0;
 SensorReadings currentReadings;
 String currentTimestamp;
 
+
+
 void setup() {
     mySerial.begin(115200);
-    delay(100);
+    delay(100); // Short init delay
     myScreen.begin();
-    myScreen.regenerate();
+    myScreen.setPowerProfile(POWER_MODE_AUTO, POWER_SCOPE_GPIO_ONLY);
+    myScreen.setOrientation(3);
+    myScreen.regenerate(); 
+    DisplayManager::reset();
     randomSeed(analogRead(A0) + millis());
+
+    // Initial sensor reading and timestamp
+    currentReadings = generateMockSensorData();
+    currentTimestamp = generateMockTimestamp();
+
+    // Calculate pages (warnings may add one)
+    const int basePages = 3;
+    const int warningsPerPage = 3;
+    const int warningCount = getWarningCount(currentReadings);
+    const int totalPages = basePages + (warningCount + warningsPerPage - 1) / warningsPerPage;
+
+    // Display page 1 immediately and stay on it until next cycle
+    currentPage = 0;
+    lastPageSwitch = millis();  // Start timing now
+    displaySensorPage(currentReadings, ENV_CONDITIONS, currentTimestamp, basePages, totalPages);
 }
 
 void loop() {
-    unsigned long now = millis();
+    unsigned long currentMillis = millis();
 
-    if (now - lastPageSwitch >= pageSwitchDurationMs) {
-        lastPageSwitch = now;
+    if (currentMillis - lastPageSwitch >= pageSwitchDurationMs) {
+        lastPageSwitch = currentMillis;
 
+        // If we’re back to the first page, update readings
         if (currentPage == 0) {
             currentReadings = generateMockSensorData();
             currentTimestamp = generateMockTimestamp();
         }
 
         const int basePages = 3;
-        const int warningPages = (getWarningCount(currentReadings) + 2) / 3;
-        const int totalPages = basePages + warningPages;
+        const int warningsPerPage = 3;
+        const int warningCount = getWarningCount(currentReadings);
+        const int totalPages = basePages + (warningCount + warningsPerPage - 1) / warningsPerPage;
 
         displaySensorPage(currentReadings, static_cast<PageType>(currentPage), currentTimestamp, basePages, totalPages);
+
         currentPage = (currentPage + 1) % totalPages;
     }
 }
+

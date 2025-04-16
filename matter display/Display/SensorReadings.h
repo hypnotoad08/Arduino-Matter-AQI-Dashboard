@@ -10,12 +10,22 @@ struct SensorReadings {
     int pm1;
     int pm25;
     int pm10;
+    int screenTemperatureF;
+    int screenHumidityPercent;
 };
 
 SensorReadings generateMockSensorData() {
     return {
-        random(65, 95), random(40, 90), random(20, 160), random(0, 500),
-        random(400, 1500), random(0, 100), random(0, 100), random(0, 100)
+        .temperatureF = random(65, 95),
+        .humidityPercent = random(40, 90),
+        .aqi = random(20, 160),
+        .vocIndex = random(0, 500),
+        .co2ppm = random(400, 1500),
+        .pm1 = random(0, 100),
+        .pm25 = random(0, 100),
+        .pm10 = random(0, 100),
+        .screenTemperatureF = random(65, 95),     // Mock screen sensor
+        .screenHumidityPercent = random(40, 90)   // Mock screen sensor
     };
 }
 
