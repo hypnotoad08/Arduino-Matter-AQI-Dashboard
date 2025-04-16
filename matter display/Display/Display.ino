@@ -23,25 +23,11 @@ void setup() {
     delay(100); // Short init delay
     myScreen.begin();
     myScreen.setPowerProfile(POWER_MODE_AUTO, POWER_SCOPE_GPIO_ONLY);
-    myScreen.setOrientation(3);
     myScreen.regenerate(); 
+    myScreen.setOrientation(3);
     DisplayManager::reset();
     randomSeed(analogRead(A0) + millis());
-
-    // Initial sensor reading and timestamp
-    currentReadings = generateMockSensorData();
-    currentTimestamp = generateMockTimestamp();
-
-    // Calculate pages (warnings may add one)
-    const int basePages = 3;
-    const int warningsPerPage = 3;
-    const int warningCount = getWarningCount(currentReadings);
-    const int totalPages = basePages + (warningCount + warningsPerPage - 1) / warningsPerPage;
-
-    // Display page 1 immediately and stay on it until next cycle
-    currentPage = 0;
-    lastPageSwitch = millis();  // Start timing now
-    displaySensorPage(currentReadings, ENV_CONDITIONS, currentTimestamp, basePages, totalPages);
+    myScreen.
 }
 
 void loop() {
