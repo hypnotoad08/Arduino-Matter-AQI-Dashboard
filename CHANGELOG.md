@@ -1,11 +1,18 @@
-## [Unreleased]
-
+## [v0.1.0] - 2025-04-16
 ### Added
-- Support for EXT4 onboard temperature and humidity sensor (HDC2080)
-  - Reads I2C sensor data via `hV_HAL_Wire_transfer`
-  - Converts temperature to Fahrenheit
-  - Converts humidity to percentage
-  - Integrates live EXT4 readings into Page 1 display
+- Modular codebase: split into `SensorReadings`, `PageRenderer`, `DisplayManager`, `DrawingHelpers`, and more
+- Page-based grid layout (ENV, Particulates, Gas, Warnings)
+- Sensor bars with aligned text, clean spacing, and warning icon support
+- "Last update" timestamp displayed on all pages
+- Integrated readings from EXT4 board's onboard HDC2080 sensor:
+  - Temperature (Screen)
+  - Humidity (Screen)
 
 ### Fixed
-- Blank screen on boot by explicitly setting screen orientation
+- Initial page render issue resolved with `setOrientation(3)`
+- EPD ghosting minimized with regenerate/flush logic inspired by Matter RGB example
+
+### Notes
+- **Mock Matter air sensor values** still used (not live data)
+- **Display device only**: This unit shows data from another Matter sensor but does not publish values
+- First pre-release milestone for screen layout and sensor readout
