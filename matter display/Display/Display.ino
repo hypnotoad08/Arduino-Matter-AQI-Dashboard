@@ -20,40 +20,39 @@ String currentTimestamp;
 
 
 void setup() {
-    mySerial.begin(115200);
-    delay(100); // Short init delay
-    myScreen.begin();
-    myScreen.setPowerProfile(POWER_MODE_AUTO, POWER_SCOPE_GPIO_ONLY);
-    myScreen.regenerate(); 
-    myScreen.setOrientation(3);
-    DisplayManager::reset();
-    randomSeed(analogRead(A0) + millis());
-    initExt4Sensor();
+  mySerial.begin(115200);
+  delay(100);  // Short init delay
+  myScreen.begin();
+  myScreen.setPowerProfile(POWER_MODE_AUTO, POWER_SCOPE_GPIO_ONLY);
+  myScreen.regenerate();
+  myScreen.setOrientation(3);
+  DisplayManager::reset();
+  randomSeed(analogRead(A0) + millis());
+  initExt4Sensor();
 }
 
 void loop() {
-    unsigned long currentMillis = millis();
+  unsigned long currentMillis = millis();
 
-    if (currentMillis - lastPageSwitch >= pageSwitchDurationMs) {
-        lastPageSwitch = currentMillis;
+  if (currentMillis - lastPageSwitch >= pageSwitchDurationMs) {
+    lastPageSwitch = currentMillis;
 
-        // If we’re back to the first page, update readings
-        if (currentPage == 0) {
-            currentReadings = generateMockSensorData();
-            Ext4SensorData screenData = readExt4SensorData();
-            currentReadings.screenTemperatureF = round(screenData.temperatureF);
-            currentReadings.screenHumidityPercent = round(screenData.humidityPercent);
-            currentTimestamp = generateMockTimestamp();
-        }
-
-        const int basePages = 3;
-        const int warningsPerPage = 3;
-        const int warningCount = getWarningCount(currentReadings);
-        const int totalPages = basePages + (warningCount + warningsPerPage - 1) / warningsPerPage;
-
-        displaySensorPage(currentReadings, static_cast<PageType>(currentPage), currentTimestamp, basePages, totalPages);
-
-        currentPage = (currentPage + 1) % totalPages;
+    // If we’re back to the first page, update readings
+    if (currentPage == 0) {
+      currentReadings = generateMockSensorData();
+      Ext4SensorData screenData = readExt4SensorData();
+      currentReadings.screenTemperatureF = round(screenData.temperatureF);
+      currentReadings.screenHumidityPercent = round(screenData.humidityPercent);
+      currentTimestamp = generateMockTimestamp();
     }
-}
 
+    const int basePages = 3;
+    const int warningsPerPage = 3;
+    const int warningCount = getWarningCount(currentReadings);
+    const int totalPages = basePages + (warningCount + warningsPerPage - 1) / warningsPerPage;
+
+    displaySensorPage(currentReadings, static_cast<PageType>(currentPage), currentTimestamp, basePages, totalPages);
+
+    currentPage = (currentPage + 1) % totalPages;
+  }
+}
