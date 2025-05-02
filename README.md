@@ -1,6 +1,6 @@
-# Matter Air Quality Display
+# Arduino-Matter-AQI-Dashboard
 
-An Arduino Nano Matter-powered e-paper display that shows air quality and environmental sensor data, including temperature, humidity, AQI, VOCs, CO₂, and particulate matter levels. Designed for use with the EXT4 e-paper dev kit from [Pervasive Displays](https://www.pervasivedisplays.com).
+An Arduino Nano Matter–powered e-paper dashboard that subscribes to standard Matter environmental clusters—temperature, humidity, AQI (Air Quality Index), VOCs, CO₂, and particulate matter levels—and renders live data on the [Pervasive Displays](https://www.pervasivedisplays.com) EXT4 2.9" E Ink dev kit.
 
 ## Features
 
@@ -16,8 +16,7 @@ An Arduino Nano Matter-powered e-paper display that shows air quality and enviro
 
 - **Arduino Nano Matter**
 - **EPDK-Matter EXT4 e-paper board** (2.9" E Ink)
-- **SEN66 air quality sensor** (planned)
-- **Thread (Matter over Thread) + UART configuration** (planned)
+- **Air-quality data source** — subscribes to any Matter-compliant sensor
 
 ## Code Structure
 
@@ -38,13 +37,18 @@ Display/
         └── DisplayManager.h     # E-paper flush and refresh logic
 ```
 
+## Integration
+
+This dashboard supports any Matter-compliant air-quality sensor. 
+For an example setup, check out my companion sensor project: [sen66-matter-sensor](https://github.com/hypnotoad08/sen66-matter-sensor).
+
 ## License
 
 This project incorporates code adapted from the [PDLS_EXT4_Basic_Matter SDK](https://github.com/PervasiveDisplays/PDLS_EXT4_Basic_Matter), licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
 
 Therefore, this project is also licensed under the **Creative Commons Attribution-ShareAlike 4.0 International** license.
 
-© 2025 Evan Lee
+© 2025 Lee Dev
 
 ## Acknowledgements
 
